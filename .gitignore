@@ -13,6 +13,8 @@ cmake_install.cmake
 *.user
 
 # Собранный бинарник и релиз-пакеты
+LeakOptimizator.exe
+LeakOptimizator.zip
 HardcoreOptimizer.exe
 HardcoreOptimizer.zip
 /bin/
@@ -27,9 +29,10 @@ release/
 *.ilk
 
 # Рантайм-файлы приложения (создаются при запуске рядом с exe)
+LeakOptimizator.backup.json
+LeakOptimizator.theme.json
 HardcoreOptimizer.backup.json
 HardcoreOptimizer.theme.json
-HardcoreOptimizer.theme.json.bak
 
 # Служебные файлы ОС / редактора
 Thumbs.db

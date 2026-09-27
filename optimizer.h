@@ -74,4 +74,26 @@ bool restoreBackgroundServices();  // Start=2 (Авто) + запустить
 bool setHighResolutionTimer();  // timeBeginPeriod(1) процессный + bcdedit
 bool restoreTimerSettings();    // timeEndPeriod + bcdedit resetdisabledynamictick
 
+// ---------------------------------------------------------------------------
+// 7. Производительность процессора и GPU (безопасные Windows-настройки).
+//    Работают одинаково для AMD и Intel. Реальный разгон CPU и включение
+//    XMP/DOCP делаются ТОЛЬКО в BIOS/UEFI — см. guidance-функцию ниже.
+// ---------------------------------------------------------------------------
+bool setHighPerformancePowerPlan();   // powercfg /setactive SCHEME_MIN
+bool restoreBalancedPowerPlan();      // powercfg /setactive SCHEME_BALANCED
+bool maximizeProcessorPerformance();  // PROCTHROTTLEMIN=100 (разпарковка ядер)
+bool restoreProcessorPerformance();   // PROCTHROTTLEMIN=5 (стандарт)
+bool disablePowerThrottling();        // отключение энергосбережения (PERFBOOSTMODE)
+bool restorePowerThrottling();
+
+// HAGS — аппаратное планирование GPU (HwSchMode). Требует перезагрузки.
+bool enableHags();                    // HwSchMode = 2
+bool restoreHags();                   // HwSchMode = 1
+
+// Игровой режим Windows (Auto Game Mode) — включаем.
+bool enableGameMode();                // AllowAutoGameMode = 1
+
+// Текстовая инструкция по XMP/DOCP и разгону (BIOS). Используется в GUI.
+std::wstring overclockXmpGuidance();
+
 } // namespace opt

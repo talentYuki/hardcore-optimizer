@@ -1,9 +1,9 @@
-# Hardcore Optimizer
+# LeakOptimizator
 
 Агрессивная системная утилита для Windows, которая выжимает максимум FPS и
-стабильности в играх, работая на уровне системных механизмов Windows (WinAPI,
-WMI, ETW). Все твики — штатные, полностью обратимые (есть кнопка **Restore**
-и JSON-слепок реестра).
+стабильности в играх. Работает на уровне системных механизмов Windows (WinAPI,
+WMI, ETW). Все твики — штатные и полностью обратимые (кнопка **Restore** +
+JSON-слепок реестра).
 
 > Для работы многих твиков требуются права администратора (UAC-манифест
 > `requireAdministrator`).
@@ -16,48 +16,81 @@ WMI, ETW). Все твики — штатные, полностью обрати
 
 | Твик | Механизм |
 |------|----------|
-| Очистка Standby-памяти | `NtSetSystemInformation` (`SystemMemoryListInformation`, purge standby list) |
+| Очистка Standby-памяти | `NtSetSystemInformation` (purge standby list) |
 | Приоритет игры | `SetPriorityClass` → `HIGH_PRIORITY_CLASS` |
 | Запрет «фоновых» ядер | `SetProcessAffinityMask` |
 | Отключение Xbox Game Bar | реестр `HKCU\Software\Microsoft\GameBar` |
 | Отключение Game DVR / записи | реестр `GameDVR` / `GameConfigStore` |
-| Ускорение мыши | реестр `Control Panel\Mouse` (пороги 0/0) |
-| Nagle-алгоритм | реестр `Tcpip\Parameters\Interfaces` для всех GUID-интерфейсов |
-| Фоновые службы (WSearch, SysMain, DiagTrack, MapsBroker) | `OpenSCManager` + `ChangeServiceConfig` |
+| Ускорение мыши | реестр `Control Panel\Mouse` |
+| Nagle-алгоритм | реестр `Tcpip\Parameters\Interfaces` (все GUID) |
+| Фоновые службы (WSearch, SysMain, DiagTrack, MapsBroker) | `SCManager` + `ChangeServiceConfig` |
 | Таймер высокого разрешения | `timeBeginPeriod(1)` + `bcdedit /set disabledynamictick yes` |
+
+### Производительность процессора и GPU (AMD / Intel)
+
+| Твик | Действие |
+|------|----------|
+| Детект вендора CPU (AMD/Intel) и частоты | чтение реестра `CentralProcessor` |
+| План питания «Максимальная производительность» | `powercfg /setactive SCHEME_MIN` |
+| Разпарковка ядер (мин. состояние 100%) | `powercfg … PROCTHROTTLEMIN 100` |
+| Агрессивный boost | `powercfg … PERFBOOSTMODE 2` |
+| HAGS — аппаратное планирование GPU | реестр `GraphicsDrivers\HwSchMode=2` (после перезагрузки) |
+| Игровой режим Windows | `GameBar\AllowAutoGameMode=1` |
+| Инструкция XMP/DOCP и разгон | подробная памятка по BIOS |
+
+> ⚠️ **Важно про разгон.** Реальный разгон CPU (умножитель, напряжение) и
+> включение XMP/DOCP выполняются **в BIOS/UEFI** (или утилитой вендора: AMD
+> Ryzen Master / Intel XTU). Из пользовательского приложения это безопасно
+> сделать нельзя — прямой запись в MSR с поднятием напряжения рискует
+> повредить железо. Поэтому здесь разгон представлен как безопасная
+> Windows-оптимизация + подробная инструкция. XMP/DOCP — заводские безопасные
+> профили памяти, их включение безопасно.
+
+### Пресеты рекомендуемых настроек ПК
+
+|c#| Пресет | Состав |
+|--|--------|--------|
+| 1 | **Максимальный FPS** | все твики + план питания + ядра + boost + HAGS + Game Mode |
+| 2 | **Стабильный frametime (онлайн)** | таймер, Nagle, план питания, ядра, boost, приоритет |
+| 3 | **Тихий / стриминг** | Game Bar/DVR, службы, standby, Game Mode |
+| 4 | **Рекомендуемые (безопасные)** | Game Mode, план питания, разпарковка ядер |
 
 ### Многопоточность (`std::thread`)
 - поток мониторинга FPS (ETW-потребитель событий `Microsoft-Windows-DxgKrnl`);
 - поток температур CPU/GPU (WMI `MSAcpi_ThermalZoneTemperature`);
 - поток загрузки ядер/ОЗУ (`GetSystemProcessorPerformanceInformation`);
-- каждый твик выполняется из потока GUI с блокировкой, не трогая овелей.
+- отдельный рабочий поток для твиков (очередь задач) — GUI не блокируется.
 
 ### Оверлей
 - прозрачное окно поверх игры: `WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST`;
 - клики «проходят насквозь» (click-through);
 - FPS, frametime, температура CPU/GPU, загрузка CPU, занятая RAM;
-- темы: **Neon Blue**, **Toxic Green**, **Blood Red**, **Rust Orange**;
-- системный **Color Picker** для акцентного цвета;
-- прозрачность 0–255; сохранение темы и позиции в JSON.
+- темы: **Neon Blue**, **Toxic Green**, **Blood Red**, **Rust Orange**, **Monochrome**;
+- системный **Color Picker** для акцентного цвета; прозрачность 0–255;
+- сохранение темы и позиции в JSON.
 
 ### Бэкап и восстановление
-- `HardcoreOptimizer.backup.json` — слепок всех затронутых значений реестра;
-- кнопка **Restore** откатывает реестр, приоритет, маску ядер, службы и таймер.
+- `LeakOptimizator.backup.json` — слепок всех затронутых значений реестра;
+- кнопка **Restore** откатывает реестр, приоритет, маску ядер, службы, таймер,
+  план питания, парковку ядер, boost и HAGS.
 
 ---
 
 ## Структура проекта
 
 ```
-main.cpp          GUI + точка входа + фоновые потоки (ETW, WMI)
-optimizer.h/cpp   системные твики (память, приоритет, реестр, службы, таймер)
+main.cpp          GUI, точка входа, пресеты, фоновые потоки (ETW, WMI, твики)
+optimizer.h/cpp   системные твики (память, приоритет, реестр, службы, таймер,
+                  производительность CPU/GPU, инструкция XMP)
 overlay.h/cpp     прозрачный оверлей (GDI)
-hardware.h/cpp    детект железа, температуры, загрузка ядер
+hardware.h/cpp    детект железа (вендор AMD/Intel), температуры, загрузка ядер
 theme.h/cpp       цветовые схемы + JSON
 backup.h/cpp      сохранение/восстановление реестра
 json_util.h/cpp   мини-JSON парсер/писатель (без внешних зависимостей)
 resources/        app.rc, app.manifest (UAC), app.ico
 CMakeLists.txt    сборка
+build.bat         сборка через vcvars64 + CMake (NMake)
+leakshop-landing.html  ч/б лендинг магазина
 ```
 
 ---
@@ -67,32 +100,32 @@ CMakeLists.txt    сборка
 | Зависимость | Назначение |
 |-------------|-----------|
 | **Windows 10 / 11** (x64) | целевая ОС |
-| **Visual Studio 2022** (компонент «Разработка классических приложений на C++»: MSVC v143, Windows 10 SDK) | компилятор + SDK |
+| **Visual Studio 2022 Build Tools** (MSVC v143, Windows 10 SDK) | компилятор + SDK |
 | **CMake ≥ 3.20** | генерация проекта |
-| **Ninja** (опционально) | параллельная сборка |
 
-Никаких внешних библиотек, кроме системных (WinAPI, WMI, ETW, COM) — всё
-линкуется из Windows SDK.
-
-Сборка проекта через MSVC обязательна (используется C++20 и WinAPI). Среда
-сборки **MinGW/GCC не поддерживается** (`CMakeLists.txt` это проверяет).
+Внешних библиотек, кроме системных (WinAPI, WMI, ETW, COM), нет — всё
+линкуется из Windows SDK. **MinGW/GCC не поддерживается** (в CMake есть
+проверка на MSVC).
 
 ---
 
 ## Сборка
 
-### Вариант 1 — через CMake + Visual Studio (рекомендуется)
+### Вариант 1 — `build.bat` (на этой машине)
 
-Откройте «Командную строку для разработчиков» (Developer Command Prompt VS2022):
+```cmd
+build.bat Release
+```
+Исполняемый файл: `build\bin\LeakOptimizator.exe`.
+
+### Вариант 2 — CMake + Visual Studio
 
 ```cmd
 cmake -S . -B build -G "Visual Studio 17 2022" -A x64
 cmake --build build --config Release
 ```
 
-Исполняемый файл появится в `build\bin\HardcoreOptimizer.exe`.
-
-### Вариант 2 — через Ninja
+### Вариант 3 — Ninja
 
 ```cmd
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -103,29 +136,26 @@ cmake --build build
 
 ## Запуск
 
-1. Запустите `HardcoreOptimizer.exe` **от имени администратора** (UAC-запрос
-   появится автоматически).
-2. Введите PID игры в поле «PID игры» (0 = применяется к процессу утилиты).
-3. Нажмите **Применить всё** — применяются все твики, снимается слепок.
-4. Оверлей покажет текущий FPS/температуры/загрузку прямо поверх игры.
-5. Для отката — **ВОССТАНОВИТЬ (Rollback)**.
+1. Запустите `LeakOptimizator.exe` **от имени администратора**.
+2. Введите PID игры в поле «PID игры» (0 = текущий процесс).
+3. Выберите пресет и нажмите **Применить пресет** (или **Применить всё**).
+4. Оверлей покажет FPS/температуры/загрузку поверх игры.
+5. Откат всего — кнопка **ВОССТАНОВИТЬ (Rollback)**.
 
 ---
 
 ## Диагностика FPS-монитора
 
 FPS считаются по real-time ETW-сессии поставщика `Microsoft-Windows-DxgKrnl`.
-Если сессия не открылась (например, из-за отсутствия прав), FPS в оверлее
-останется равным 0, а температуры и загрузка продолжат работать — это не
-критично и не ломает твики.
+Если сессия не открылась (нет прав), FPS останется 0 — температуры и загрузка
+продолжат работать, твики не ломаются.
 
 ---
 
 ## Примечания
 
-- Темы и настройки хранятся рядом с exe: `HardcoreOptimizer.theme.json`,
-  `HardcoreOptimizer.backup.json`.
-- Отключение служб `SysMain`/`WSearch` может замедлить поиск и предзагрузку —
-  это намеренное «агрессивное» поведение утилиты, которое можно откатить.
-- `bcdedit /set disabledynamictick yes` действует до следующего отката/сброса
-  BCD и позволяет ядру использовать фиксированный 1 мс тик.
+- Настройки хранятся рядом с exe: `LeakOptimizator.theme.json`,
+  `LeakOptimizator.backup.json`.
+- HAGS (`HwSchMode=2`) вступает в силу **после перезагрузки**.
+- Отключение служб `SysMain`/`WSearch` замедляет поиск/предзагрузку — это
+  намеренное «агрессивное» поведение, откатывается кнопкой Restore.

@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(HardcoreOptimizer
+project(LeakOptimizator
         VERSION 1.0.0
-        DESCRIPTION "Агрессивная утилита для выжимания FPS и стабильности в играх"
+        DESCRIPTION "LeakOptimizator — утилита для выжимания FPS и стабильности в играх"
         LANGUAGES CXX)
 
 # ---------------------------------------------------------------------------
@@ -14,7 +14,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Проверяем, что собираемся под MSVC (Visual Studio 2022 / Build Tools).
 if(NOT MSVC)
-    message(FATAL_ERROR "HardcoreOptimizer собирается только компилятором MSVC (Visual Studio 2022).")
+    message(FATAL_ERROR "LeakOptimizator собирается только компилятором MSVC (Visual Studio 2022).")
 endif()
 
 # Гарантированно компилируем как Windows-приложение (WinMain, GUI).
@@ -27,7 +27,7 @@ add_compile_options(/W4 /Zc:__cplusplus /permissive- /utf-8)
 # ---------------------------------------------------------------------------
 # Основной исполняемый файл (паттерн WIN32 = GUI-подсистема, WinMain).
 # ---------------------------------------------------------------------------
-add_executable(HardcoreOptimizer WIN32)
+add_executable(LeakOptimizator WIN32)
 
 # ---------------------------------------------------------------------------
 # Библиотеки, линкуемые с приложением.
@@ -41,14 +41,14 @@ add_executable(HardcoreOptimizer WIN32)
 #   - shell32:        иконка приложения (LoadIcon)
 #   - winmm:          время высокого разрешения (timeBeginPeriod)
 # ---------------------------------------------------------------------------
-target_link_libraries(HardcoreOptimizer PRIVATE
+target_link_libraries(LeakOptimizator PRIVATE
     user32 gdi32 comdlg32 advapi32 comctl32 shell32 shlwapi
     ole32 oleaut32 wbemuuid uuid dxgi dwmapi winmm)
 
 # ---------------------------------------------------------------------------
 # Исходники проекта.
 # ---------------------------------------------------------------------------
-target_sources(HardcoreOptimizer PRIVATE
+target_sources(LeakOptimizator PRIVATE
     main.cpp
     optimizer.cpp
     overlay.cpp
@@ -65,7 +65,7 @@ if(NOT EXISTS "${RESOURCE_DIR}/app.rc")
         "1 ICON \"app.ico\"\n"
     )
 endif()
-target_sources(HardcoreOptimizer PRIVATE "${RESOURCE_DIR}/app.rc")
+target_sources(LeakOptimizator PRIVATE "${RESOURCE_DIR}/app.rc")
 
 # ---------------------------------------------------------------------------
 # UAC-манифест (requireAdministrator) встраиваем ПОСЛЕ линковки через mt.exe.
@@ -73,9 +73,9 @@ target_sources(HardcoreOptimizer PRIVATE "${RESOURCE_DIR}/app.rc")
 # данной версией инструментов, поэтому делаем это отдельным шагом.
 # ---------------------------------------------------------------------------
 if(CMAKE_MT)
-    add_custom_command(TARGET HardcoreOptimizer POST_BUILD
+    add_custom_command(TARGET LeakOptimizator POST_BUILD
         COMMAND "${CMAKE_MT}" -manifest "${RESOURCE_DIR}/app.manifest"
-                "-outputresource:$<TARGET_FILE:HardcoreOptimizer>;#1"
+                "-outputresource:$<TARGET_FILE:LeakOptimizator>;#1"
         COMMENT "Embedding UAC manifest (requireAdministrator)"
         VERBATIM)
 endif()
@@ -83,16 +83,16 @@ endif()
 # ---------------------------------------------------------------------------
 # Свойства вывода: GUI-подсистема, имя exe.
 # ---------------------------------------------------------------------------
-set_target_properties(HardcoreOptimizer PROPERTIES
-    OUTPUT_NAME "HardcoreOptimizer"
+set_target_properties(LeakOptimizator PROPERTIES
+    OUTPUT_NAME "LeakOptimizator"
     WIN32_EXECUTABLE ON
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
 # Собираем release-версию с полной оптимизацией (заголовочные inline - на
 # скорость работы). В Debug ничего не форсируем, чтобы сохранить отладку.
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
-    target_compile_options(HardcoreOptimizer PRIVATE /O2 /Ob2 /GL)
-    target_link_options(HardcoreOptimizer PRIVATE /LTCG)
+    target_compile_options(LeakOptimizator PRIVATE /O2 /Ob2 /GL)
+    target_link_options(LeakOptimizator PRIVATE /LTCG)
 endif()
 
 # Кодировка исходников UTF-8 — все строки с русскими комментариями заведомо

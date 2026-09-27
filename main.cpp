@@ -1,5 +1,5 @@
 // ============================================================================
-// main.cpp — точка входа и главное окно Hardcore Optimizer.
+// main.cpp — точка входа и главное окно LeakOptimizator.
 //
 // Собирает всю систему воедино:
 //   - главное окно с кнопками твиков, выбором темы, логом операций
@@ -60,6 +60,14 @@ enum {
     EditLog      = 2017, // Лог операций
     StaticHw     = 2020, // Инфо о железе
     StaticStats  = 2021, // Живые метрики
+    BtnPower     = 2030, // План питания: макс. производительность
+    BtnCores     = 2031, // Разпарковка ядер (мин. 100%)
+    BtnBoost     = 2032, // Boost-режим агрессивный
+    BtnHags      = 2033, // HAGS: аппаратное планирование GPU
+    BtnGameMode  = 2034, // Игровой режим Windows
+    BtnXmp       = 2035, // Инструкция XMP/DOCP и разгона
+    ComboPreset  = 2040, // Пресеты рекомендуемых настроек
+    BtnApplyPreset = 2041, // Применить выбранный пресет
 };
 } // namespace ids
 
@@ -345,6 +353,13 @@ void ApplyAllTweaks() {
         Report(L"Фоновые службы остановлены", opt::disableBackgroundServices());
         Report(L"Таймер 1 мс + disabledynamictick", opt::setHighResolutionTimer());
 
+        // Производительность CPU/GPU.
+        Report(L"План питания: макс. производительность", opt::setHighPerformancePowerPlan());
+        Report(L"Разпарковка ядер (мин. 100%)", opt::maximizeProcessorPerformance());
+        Report(L"Boost-режим: агрессивный", opt::disablePowerThrottling());
+        Report(L"Игровой режим Windows", opt::enableGameMode());
+        Report(L"HAGS (после перезагрузки)", opt::enableHags());
+
         app::g_gamePid = ResolveTargetPid();
         bool ok = opt::setGamePriority(app::g_gamePid);
         Report(L"Приоритет HIGH_PRIORITY_CLASS", ok);
@@ -376,6 +391,12 @@ void RestoreAll() {
         Report(L"Ускорение мыши возвращено", opt::enableMouseAccel());
         Report(L"Службы возвращены", opt::restoreBackgroundServices());
         Report(L"Таймер возвращён", opt::restoreTimerSettings());
+
+        // Откат производительности CPU/GPU.
+        Report(L"План питания: сбалансированный", opt::restoreBalancedPowerPlan());
+        Report(L"Минимальное состояние ядер", opt::restoreProcessorPerformance());
+        Report(L"Boost-режим стандартный", opt::restorePowerThrottling());
+        Report(L"HAGS восстановлен", opt::restoreHags());
         Log(L">>> Все изменения откачены.");
     });
 }
@@ -440,6 +461,125 @@ void DoPriority() {
             app::g_gamePid ? app::g_gamePid : GetCurrentProcessId()));
     });
 }
+
+// ---- Производительность CPU/GPU (безопасные твики) ----
+void DoPower() {
+    PostTweak([] {
+        SnapshotBeforeChanges();
+        Report(L"План питания: макс. производительность",
+               opt::setHighPerformancePowerPlan());
+    });
+}
+
+void DoCores() {
+    PostTweak([] {
+        SnapshotBeforeChanges();
+        Report(L"Разпарковка ядер (мин. состояние 100%)",
+               opt::maximizeProcessorPerformance());
+    });
+}
+
+void DoBoost() {
+    PostTweak([] {
+        SnapshotBeforeChanges();
+        Report(L"Boost-режим: агрессивный",
+               opt::disablePowerThrottling());
+    });
+}
+
+void DoHags() {
+    PostTweak([] {
+        SnapshotBeforeChanges();
+        Report(L"HAGS включён (нужна перезагрузка)",
+               opt::enableHags());
+    });
+}
+
+void DoGameMode() {
+    PostTweak([] {
+        SnapshotBeforeChanges();
+        Report(L"Игровой режим Windows включён",
+               opt::enableGameMode());
+    });
+}
+
+void DoXmp(HWND hwnd) {
+    // Только инструкция (BIOS): реальный разгон и XMP из Windows не делаем.
+    MessageBoxW(hwnd, opt::overclockXmpGuidance().c_str(),
+                L"Разгон CPU и XMP/DOCP — инструкция (BIOS)",
+                MB_OK | MB_ICONINFORMATION);
+}
+
+// ---------------------------------------------------------------------------
+// 6a. Пресеты рекомендуемых настроек ПК.
+//     Каждый пресет — это проверенная комбинация твиков под свой сценарий.
+// ---------------------------------------------------------------------------
+const wchar_t* const kPresetNames[] = {
+    L"Максимальный FPS",
+    L"Стабильный frametime (онлайн)",
+    L"Тихий / стриминг",
+    L"Рекомендуемые (безопасные)",
+};
+
+void ApplyPresetByIndex(HWND hwnd) {
+    HWND combo = GetDlgItem(hwnd, ids::ComboPreset);
+    int sel = combo ? static_cast<int>(SendMessageW(combo, CB_GETCURSEL, 0, 0)) : -1;
+    if (sel < 0 || sel >= 4) return;
+    PostTweak([sel] {
+        SnapshotBeforeChanges();
+        DWORD pid = ResolveTargetPid();
+        Log(std::wstring(L">>> Пресет: ") + kPresetNames[sel]);
+
+        switch (sel) {
+        case 0: // Максимальный FPS — весь агрессивный набор.
+            Report(L"Standby-память", opt::clearStandbyMemory());
+            Report(L"Game Bar", opt::disableGameBar());
+            Report(L"Game DVR", opt::disableGameDvr());
+            Report(L"Ускорение мыши", opt::disableMouseAccel());
+            Report(L"Nagle", opt::disableNagle());
+            Report(L"Фоновые службы", opt::disableBackgroundServices());
+            Report(L"Таймер 1 мс", opt::setHighResolutionTimer());
+            Report(L"План питания: макс.", opt::setHighPerformancePowerPlan());
+            Report(L"Разпарковка ядер", opt::maximizeProcessorPerformance());
+            Report(L"Boost агрессивный", opt::disablePowerThrottling());
+            Report(L"Игровой режим", opt::enableGameMode());
+            Report(L"HAGS (после перезагрузки)", opt::enableHags());
+            app::g_gamePid = pid;
+            Report(L"Приоритет HIGH", opt::setGamePriority(pid));
+            Report(L"Запрет фоновых ядер", opt::setGameAffinity(pid, true));
+            break;
+
+        case 1: // Стабильный frametime — только то, что влияет на ровность кадров.
+            Report(L"Таймер 1 мс", opt::setHighResolutionTimer());
+            Report(L"Nagle", opt::disableNagle());
+            Report(L"План питания: макс.", opt::setHighPerformancePowerPlan());
+            Report(L"Разпарковка ядер", opt::maximizeProcessorPerformance());
+            Report(L"Boost агрессивный", opt::disablePowerThrottling());
+            Report(L"Игровой режим", opt::enableGameMode());
+            app::g_gamePid = pid;
+            Report(L"Приоритет HIGH", opt::setGamePriority(pid));
+            Report(L"Запрет фоновых ядер", opt::setGameAffinity(pid, true));
+            break;
+
+        case 2: // Тихий / стриминг — убираем фон, но без агрессии к железу.
+            Report(L"Game Bar", opt::disableGameBar());
+            Report(L"Game DVR", opt::disableGameDvr());
+            Report(L"Фоновые службы", opt::disableBackgroundServices());
+            Report(L"Standby-память", opt::clearStandbyMemory());
+            Report(L"Игровой режим", opt::enableGameMode());
+            break;
+
+        case 3: // Рекомендуемые (безопасные) — минимум изменений.
+            Report(L"Игровой режим", opt::enableGameMode());
+            Report(L"План питания: макс.", opt::setHighPerformancePowerPlan());
+            Report(L"Разпарковка ядер", opt::maximizeProcessorPerformance());
+            break;
+        }
+        Log(L">>> Пресет применён.");
+    });
+}
+
+void DoApplyPreset(HWND hwnd) { ApplyPresetByIndex(hwnd); }
 
 void DoOverlayToggle(HWND hwnd) {
     app::g_overlayVisible = !app::g_overlayVisible;
@@ -536,6 +676,13 @@ LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
                 case ids::BtnOverlay:  DoOverlayToggle(hwnd);   break;
                 case ids::BtnColor:    DoPickColor(hwnd);       break;
                 case ids::BtnOpacity:  DoSetOpacity(hwnd);      break;
+                case ids::BtnPower:    DoPower();               break;
+                case ids::BtnCores:    DoCores();               break;
+                case ids::BtnBoost:    DoBoost();               break;
+                case ids::BtnHags:     DoHags();                break;
+                case ids::BtnGameMode: DoGameMode();            break;
+                case ids::BtnXmp:      DoXmp(hwnd);             break;
+                case ids::BtnApplyPreset: DoApplyPreset(hwnd);  break;
                 case ids::ComboTheme:
                     if (HIWORD(wParam) == CBN_SELCHANGE) ApplyThemePreset(hwnd);
                     break;
@@ -585,15 +732,15 @@ static HWND BuildMainWindow(HINSTANCE hInst) {
     wc.hInstance     = hInst;
     wc.hCursor       = LoadCursorW(nullptr, IDC_ARROW);
     wc.hIcon         = LoadIconW(hInst, MAKEINTRESOURCEW(1));
-    wc.lpszClassName = L"HardcoreOptMain";
+    wc.lpszClassName = L"LeakOptMain";
     wc.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_BTNFACE + 1);
     ATOM cls = RegisterClassW(&wc);
     if (cls == 0 && GetLastError() != ERROR_CLASS_ALREADY_EXISTS) return nullptr;
 
-    HWND hwnd = CreateWindowExW(0, L"HardcoreOptMain",
-                                L"Hardcore Optimizer — системный твикер",
+    HWND hwnd = CreateWindowExW(0, L"LeakOptMain",
+                                L"LeakOptimizator — системный твикер",
                                 WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX,
-                                CW_USEDEFAULT, CW_USEDEFAULT, 620, 640,
+                                CW_USEDEFAULT, CW_USEDEFAULT, 620, 820,
                                 nullptr, nullptr, hInst, nullptr);
     if (!hwnd) return nullptr;
 
@@ -603,8 +750,9 @@ static HWND BuildMainWindow(HINSTANCE hInst) {
     // Заголовки секций.
     MkWnd(hwnd, L"STATIC", L"ЖЕЛЕЗО", 0, 14, 10, 190, 12, 0);
     MkWnd(hwnd, L"STATIC", L"ТВИКИ", 0, 228, 10, 370, 12, 0);
-    MkWnd(hwnd, L"STATIC", L"ОВЕРЛЕЙ", 0, 14, 296, 400, 12, 0);
-    MkWnd(hwnd, L"STATIC", L"МОНИТОРИНГ", 0, 14, 416, 400, 12, 0);
+    MkWnd(hwnd, L"STATIC", L"ОВЕРЛЕЙ", 0, 14, 250, 400, 12, 0);
+    MkWnd(hwnd, L"STATIC", L"ПРЕСЕТЫ И ПРОИЗВОДИТЕЛЬНОСТЬ", 0, 14, 418, 400, 12, 0);
+    MkWnd(hwnd, L"STATIC", L"МОНИТОРИНГ", 0, 14, 578, 400, 12, 0);
 
     // Инфо о железе.
     MkWnd(hwnd, L"STATIC", L"", SS_LEFT | WS_BORDER, 14, 26, 196, 120, ids::StaticHw);
@@ -628,21 +776,37 @@ static HWND BuildMainWindow(HINSTANCE hInst) {
     MkWnd(hwnd, L"BUTTON", L"ВОССТАНОВИТЬ (Rollback)",     BS_PUSHBUTTON, 228, 222, 180, 34, ids::BtnRestore);
 
     // Оверлей.
-    MkWnd(hwnd, L"BUTTON", L"Скрыть оверлей",  BS_PUSHBUTTON, 14, 312, 130, 28, ids::BtnOverlay);
-    MkWnd(hwnd, L"STATIC", L"Прозрачность:",   SS_RIGHT,      14, 348, 90, 18, 0);
-    MkWnd(hwnd, L"EDIT",   L"235", ES_NUMBER | WS_BORDER,     108, 346, 40, 20, ids::EditOpacity);
-    MkWnd(hwnd, L"BUTTON", L"Применить",       BS_PUSHBUTTON, 152, 346, 90, 22, ids::BtnOpacity);
-    HWND combo = MkWnd(hwnd, L"COMBOBOX", L"", WS_BORDER | CBS_DROPDOWNLIST,
-                       14, 380, 170, 200, ids::ComboTheme);
+    MkWnd(hwnd, L"BUTTON", L"Скрыть оверлей",  BS_PUSHBUTTON, 14, 268, 130, 28, ids::BtnOverlay);
+    MkWnd(hwnd, L"STATIC", L"Прозрачность:",   SS_RIGHT,      14, 304, 90, 18, 0);
+    MkWnd(hwnd, L"EDIT",   L"235", ES_NUMBER | WS_BORDER,     108, 302, 40, 20, ids::EditOpacity);
+    MkWnd(hwnd, L"BUTTON", L"Применить",       BS_PUSHBUTTON, 152, 302, 90, 22, ids::BtnOpacity);
+    HWND comboTheme = MkWnd(hwnd, L"COMBOBOX", L"", WS_BORDER | CBS_DROPDOWNLIST,
+                            14, 336, 170, 200, ids::ComboTheme);
     for (const auto& p : theme::presets())
-        SendMessageW(combo, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(p.name.c_str()));
-    SendMessageW(combo, CB_SETCURSEL, 0, 0);
-    MkWnd(hwnd, L"BUTTON", L"Color Picker (акцент)", BS_PUSHBUTTON, 190, 380, 130, 24, ids::BtnColor);
+        SendMessageW(comboTheme, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(p.name.c_str()));
+    SendMessageW(comboTheme, CB_SETCURSEL, 0, 0);
+    MkWnd(hwnd, L"BUTTON", L"Color Picker (акцент)", BS_PUSHBUTTON, 190, 336, 130, 24, ids::BtnColor);
+
+    // Пресеты рекомендуемых настроек.
+    HWND comboPreset = MkWnd(hwnd, L"COMBOBOX", L"", WS_BORDER | CBS_DROPDOWNLIST,
+                             14, 438, 190, 200, ids::ComboPreset);
+    for (const wchar_t* n : kPresetNames)
+        SendMessageW(comboPreset, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(n));
+    SendMessageW(comboPreset, CB_SETCURSEL, 0, 0);
+    MkWnd(hwnd, L"BUTTON", L"Применить пресет", BS_PUSHBUTTON, 228, 438, 180, 28, ids::BtnApplyPreset);
+
+    // Производительность CPU/GPU (безопасные твики).
+    MkWnd(hwnd, L"BUTTON", L"План питания: макс. произв.", BS_PUSHBUTTON, 14, 470, 190, 28, ids::BtnPower);
+    MkWnd(hwnd, L"BUTTON", L"Разпарковка ядер (мин. 100%)", BS_PUSHBUTTON, 228, 470, 180, 28, ids::BtnCores);
+    MkWnd(hwnd, L"BUTTON", L"Boost: агрессивный",          BS_PUSHBUTTON, 14, 502, 190, 28, ids::BtnBoost);
+    MkWnd(hwnd, L"BUTTON", L"HAGS (планирование GPU)",     BS_PUSHBUTTON, 228, 502, 180, 28, ids::BtnHags);
+    MkWnd(hwnd, L"BUTTON", L"Игровой режим Windows",       BS_PUSHBUTTON, 14, 534, 190, 28, ids::BtnGameMode);
+    MkWnd(hwnd, L"BUTTON", L"XMP / разгон (инструкция)",   BS_PUSHBUTTON, 228, 534, 180, 28, ids::BtnXmp);
 
     // Статус и лог.
-    MkWnd(hwnd, L"STATIC", L"", SS_LEFT | WS_BORDER, 14, 432, 396, 20, ids::StaticStats);
+    MkWnd(hwnd, L"STATIC", L"", SS_LEFT | WS_BORDER, 14, 596, 396, 20, ids::StaticStats);
     MkWnd(hwnd, L"EDIT", L"", WS_BORDER | ES_MULTILINE | ES_READONLY |
-          ES_AUTOVSCROLL | WS_VSCROLL, 14, 458, 570, 140, ids::EditLog);
+          ES_AUTOVSCROLL | WS_VSCROLL, 14, 624, 570, 160, ids::EditLog);
 
     return hwnd;
 }
@@ -669,7 +833,7 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, PWSTR, int nCmdShow) {
     app::g_overlayWin.setTheme(theme::activeTheme());
 
     // Оверлей создаём до главного окна, чтобы он был поверх.
-    if (app::g_overlayWin.create(L"Hardcore Optimizer — оверлей")) {
+    if (app::g_overlayWin.create(L"LeakOptimizator — оверлей")) {
         app::g_overlayWin.show(true);
         app::g_overlayWin.setData(&app::g_overlay);
         app::g_overlayWin.setClickThrough(true);
@@ -685,9 +849,10 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, PWSTR, int nCmdShow) {
     hw::HardwareInfo info = hw::queryHardware();
     {
         wchar_t buf[1024];
-        std::swprintf(buf, 1024, L"CPU: %ls\r\nПотоков: %u\r\nGPU: %ls\r\nRAM: %ls",
-                      info.cpuName.c_str(), info.cpuLogical,
-                      info.gpuName.c_str(), info.ramText.c_str());
+        std::swprintf(buf, 1024,
+            L"CPU: %ls\r\nВендор: %ls\r\nЧастота: %u МГц\r\nПотоков: %u\r\nGPU: %ls\r\nRAM: %ls",
+            info.cpuName.c_str(), info.cpuVendor.c_str(), info.cpuBaseMhz,
+            info.cpuLogical, info.gpuName.c_str(), info.ramText.c_str());
         SetWindowTextW(GetDlgItem(hwnd, ids::StaticHw), buf);
     }
 

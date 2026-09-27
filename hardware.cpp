@@ -33,6 +33,40 @@ static std::wstring readCpuNameFromRegistry() {
     return name;
 }
 
+// Определяет производителя CPU по VendorIdentifier в реестре.
+static std::wstring readCpuVendorFromRegistry() {
+    HKEY key = nullptr;
+    wchar_t buf[64] = {0};
+    DWORD size = static_cast<DWORD>(sizeof(buf));
+    std::wstring vendor;
+    if (RegOpenKeyExW(HKEY_LOCAL_MACHINE,
+                      L"HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0",
+                      0, KEY_QUERY_VALUE, &key) == ERROR_SUCCESS) {
+        if (RegQueryValueExW(key, L"VendorIdentifier", nullptr, nullptr,
+                             reinterpret_cast<LPBYTE>(buf), &size) == ERROR_SUCCESS) {
+            vendor = buf;
+        }
+        RegCloseKey(key);
+    }
+    if (vendor == L"GenuineIntel") return L"Intel";
+    if (vendor == L"AuthenticAMD") return L"AMD";
+    return vendor.empty() ? L"Неизвестно" : vendor;
+}
+
+// Номинальная частота первого ядра (значение "~MHz") в МГц.
+static unsigned readCpuBaseMhzFromRegistry() {
+    HKEY key = nullptr;
+    DWORD mhz = 0, size = sizeof(mhz), type = 0;
+    if (RegOpenKeyExW(HKEY_LOCAL_MACHINE,
+                      L"HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0",
+                      0, KEY_QUERY_VALUE, &key) == ERROR_SUCCESS) {
+        RegQueryValueExW(key, L"~MHz", nullptr, &type,
+                         reinterpret_cast<LPBYTE>(&mhz), &size);
+        RegCloseKey(key);
+    }
+    return mhz;
+}
+
 // Регистрируем dxgi.lib — уже в проекте; для чтения GPU используем DXGI.
 static HRESULT enumeratePrimaryGpu(std::wstring& name) {
     IDXGIFactory1* factory = nullptr;
@@ -71,6 +105,9 @@ HardwareInfo queryHardware() {
     HardwareInfo info;
     info.cpuName = readCpuNameFromRegistry();
     if (info.cpuName.empty()) info.cpuName = L"Неизвестный процессор";
+    info.cpuVendor = readCpuVendorFromRegistry();
+    info.cpuBaseMhz = readCpuBaseMhzFromRegistry();
+    info.cpuMaxMhz = info.cpuBaseMhz;
 
     info.cpuLogical = logicalProcessors();
     // Физических ядер чисто по WinAPI не получить; аппроксимируем половиной

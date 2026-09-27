@@ -18,5 +18,5 @@ echo === Build ===
 cmake --build build
 if errorlevel 1 ( echo ERROR build & exit /b 1 )
 
-echo === DONE: build\HardcoreOptimizer.exe ===
+echo === DONE: build\bin\LeakOptimizator.exe ===
 endlocal

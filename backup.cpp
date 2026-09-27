@@ -63,6 +63,8 @@ const std::vector<KeyTarget>& managedKeys() {
         { Root::HKLM, L"SYSTEM\\CurrentControlSet\\Services\\WSearch",    L"Start" },
         { Root::HKLM, L"SYSTEM\\CurrentControlSet\\Services\\DiagTrack",  L"Start" },
         { Root::HKLM, L"SYSTEM\\CurrentControlSet\\Services\\MapsBroker", L"Start" },
+        // HAGS — аппаратное планирование GPU.
+        { Root::HKLM, L"SYSTEM\\CurrentControlSet\\Control\\GraphicsDrivers", L"HwSchMode" },
     };
     return keys;
 }
@@ -249,10 +251,10 @@ void restoreSnapshot(const std::vector<RegValue>& snap) {
 std::wstring defaultBackupPath() {
     wchar_t buffer[MAX_PATH];
     if (GetModuleFileNameW(nullptr, buffer, MAX_PATH) == 0)
-        return L"HardcoreOptimizer.backup.json";
+        return L"LeakOptimizator.backup.json";
     wchar_t* slash = std::wcsrchr(buffer, L'\\');
     if (slash) *(slash + 1) = L'\0';
-    return std::wstring(buffer) + L"HardcoreOptimizer.backup.json";
+    return std::wstring(buffer) + L"LeakOptimizator.backup.json";
 }
 
 // ---------------------------------------------------------------------------

@@ -18,8 +18,11 @@ namespace hw {
 // Статичный снимок железа.
 struct HardwareInfo {
     std::wstring cpuName;      // наименование процессора
+    std::wstring cpuVendor;    // "Intel" / "AMD" / "Неизвестно"
     unsigned     cpuCores = 0; // физических ядер
     unsigned     cpuLogical = 0; // логических потоков
+    unsigned     cpuBaseMhz = 0; // номинальная частота (МГц)
+    unsigned     cpuMaxMhz = 0;  // максимальная частота (МГц)
     std::wstring gpuName;      // основная видеокарта
     std::wstring ramText;      // человекочитаемый размер ОЗУ ("32 ГБ")
 

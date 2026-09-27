@@ -39,7 +39,7 @@ bool OverlayWindow::create(const std::wstring& title) {
     WNDCLASSW wc{};
     wc.lpfnWndProc   = WndProc;
     wc.hInstance     = GetModuleHandleW(nullptr);
-    wc.lpszClassName = L"HardcoreOverlay";
+    wc.lpszClassName = L"LeakOptOverlay";
     if (!RegisterClassW(&wc)) {
         // Окно уже зарегистрировано в этом процессе — значит, окно существует.
         if (GetLastError() != ERROR_CLASS_ALREADY_EXISTS) return false;
@@ -47,7 +47,7 @@ bool OverlayWindow::create(const std::wstring& title) {
 
     m_hwnd = CreateWindowExW(
         WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST | WS_EX_TOOLWINDOW,
-        L"HardcoreOverlay", title.c_str(),
+        L"LeakOptOverlay", title.c_str(),
         WS_POPUP, m_winX, m_winY, m_winW, m_winH,
         nullptr, nullptr, wc.hInstance, this);
     if (!m_hwnd) return false;
@@ -146,7 +146,7 @@ void OverlayWindow::onPaint() {
     HGDIOBJ oldFont = SelectObject(hdc, m_fontTitle);
     SetBkMode(hdc, TRANSPARENT);
     SetTextColor(hdc, toColorRef(m_theme.accent));
-    std::wstring title = L"Hardcore Optimizer";
+    std::wstring title = L"LeakOptimizator";
     TextOutW(hdc, 12, 10, title.c_str(), static_cast<int>(title.size()));
 
     // Подзаголовок: имя игры и линия-разделитель.

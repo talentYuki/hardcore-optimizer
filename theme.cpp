@@ -101,16 +101,15 @@ static Theme nodeToTheme(const json::Node& root) {
 }
 
 // ---------------------------------------------------------------------------
-// Путь к файлу темы: <каталог exe>\HardcoreOptimizer.theme.json
-// ---------------------------------------------------------------------------
+// Путь к файлу темы: <каталог exe>\LeakOptimizator.theme.json
 std::wstring defaultThemePath() {
     wchar_t buffer[MAX_PATH];
-    if (GetModuleFileNameW(nullptr, buffer, MAX_PATH) == 0) return L"HardcoreOptimizer.theme.json";
+    if (GetModuleFileNameW(nullptr, buffer, MAX_PATH) == 0) return L"LeakOptimizator.theme.json";
     // Обрезаем имя exe, оставляя каталог.
     wchar_t* slash = std::wcsrchr(buffer, L'\\');
     if (slash) *(slash + 1) = L'\0';
     std::wstring dir(buffer);
-    return dir + L"HardcoreOptimizer.theme.json";
+    return dir + L"LeakOptimizator.theme.json";
 }
 
 // ---------------------------------------------------------------------------

@@ -351,4 +351,133 @@ bool restoreTimerSettings() {
     return true;
 }
 
+// ---------------------------------------------------------------------------
+// 7. Производительность процессора и GPU (безопасные Windows-настройки).
+// ---------------------------------------------------------------------------
+namespace {
+
+// Запускает одну команду без окна и ждёт завершения. Возвращает true, если
+// процесс запустился (exit-код не проверяем — у powercfg бывают «шумные»).
+bool runHidden(const std::wstring& command) {
+    STARTUPINFOW si{ sizeof(si) };
+    PROCESS_INFORMATION pi{};
+    std::wstring cmd = L"powershell.exe -NoProfile -Command " + command;
+    if (!CreateProcessW(nullptr, cmd.data(), nullptr, nullptr, FALSE,
+                        CREATE_NO_WINDOW, nullptr, nullptr, &si, &pi))
+        return false;
+    WaitForSingleObject(pi.hProcess, 30000);
+    CloseHandle(pi.hThread);
+    CloseHandle(pi.hProcess);
+    return true;
+}
+
+} // namespace
+
+// План питания «Максимальная производительность» (высокая производительность).
+bool setHighPerformancePowerPlan() {
+    clearError();
+    // SCHEME_MIN — системный алиас High Performance (8c5e7fda-...).
+    if (!runHidden(L"powercfg /setactive SCHEME_MIN")) {
+        setError(L"Не удалось активировать план питания");
+        return false;
+    }
+    return true;
+}
+
+bool restoreBalancedPowerPlan() {
+    clearError();
+    return runHidden(L"powercfg /setactive SCHEME_BALANCED");
+}
+
+// Минимальное состояние процессора 100% — ядра не «паркуются» (не выключаются
+// из планировщика). Это устраняет микрофризы от включения/выключения ядер.
+bool maximizeProcessorPerformance() {
+    clearError();
+    bool ok = true;
+    ok &= runHidden(L"powercfg /setacvalueindex SCHEME_CURRENT SUB_PROCESSOR PROCTHROTTLEMIN 100");
+    ok &= runHidden(L"powercfg /setactive SCHEME_CURRENT");
+    if (!ok) setError(L"Не удалось настроить парковку ядер");
+    return ok;
+}
+
+bool restoreProcessorPerformance() {
+    clearError();
+    bool ok = true;
+    ok &= runHidden(L"powercfg /setacvalueindex SCHEME_CURRENT SUB_PROCESSOR PROCTHROTTLEMIN 5");
+    ok &= runHidden(L"powercfg /setactive SCHEME_CURRENT");
+    return ok;
+}
+
+// PERFBOOSTMODE=2 — «агрессивный» boost (раскрывает все ядра для нагрузки).
+bool disablePowerThrottling() {
+    clearError();
+    bool ok = true;
+    ok &= runHidden(L"powercfg /setacvalueindex SCHEME_CURRENT SUB_PROCESSOR PERFBOOSTMODE 2");
+    ok &= runHidden(L"powercfg /setactive SCHEME_CURRENT");
+    if (!ok) setError(L"Не удалось настроить boost-режим");
+    return ok;
+}
+
+bool restorePowerThrottling() {
+    clearError();
+    bool ok = true;
+    ok &= runHidden(L"powercfg /setacvalueindex SCHEME_CURRENT SUB_PROCESSOR PERFBOOSTMODE 0");
+    ok &= runHidden(L"powercfg /setactive SCHEME_CURRENT");
+    return ok;
+}
+
+// HAGS (Hardware Accelerated GPU Scheduling): HwSchMode=2 включает аппаратное
+// планирование очередей GPU — снижает задержку. Требует перезагрузки.
+bool enableHags() {
+    clearError();
+    if (!writeDword(HKEY_LOCAL_MACHINE,
+                    L"SYSTEM\\CurrentControlSet\\Control\\GraphicsDrivers",
+                    L"HwSchMode", 2)) {
+        setError(L"Не удалось записать HwSchMode=2");
+        return false;
+    }
+    return true;
+}
+
+bool restoreHags() {
+    clearError();
+    if (!writeDword(HKEY_LOCAL_MACHINE,
+                    L"SYSTEM\\CurrentControlSet\\Control\\GraphicsDrivers",
+                    L"HwSchMode", 1)) {
+        setError(L"Не удалось записать HwSchMode=1");
+        return false;
+    }
+    return true;
+}
+
+// Игровой режим Windows (разрешаем автоигровой режим).
+bool enableGameMode() {
+    clearError();
+    bool ok = true;
+    ok &= writeDword(HKEY_CURRENT_USER, L"Software\\Microsoft\\GameBar",
+                     L"AllowAutoGameMode", 1);
+    ok &= writeDword(HKEY_CURRENT_USER, L"Software\\Microsoft\\GameBar",
+                     L"AutoGameModeEnabled", 1);
+    if (!ok) setError(L"Не удалось включить игровой режим");
+    return ok;
+}
+
+// Текст инструкции по XMP/DOCP и разгону (BIOS). Никаких рискованных MSR.
+std::wstring overclockXmpGuidance() {
+    return
+        L"РАЗГОН CPU И XMP/DOCP — БИОС (не программа!)\r\n\r\n"
+        L"1. Перезагрузись и войди в UEFI/BIOS (Del / F2 / F10).\r\n"
+        L"2. XMP/DOCP (память):\r\n"
+        L"   Intel: AI Tweaker / Extreme Memory Profile (XMP) -> Profile 1\r\n"
+        L"   AMD:   OC / Memory -> DOCP / EXPO -> Profile 1\r\n"
+        L"3. Разгон CPU (осторожно, риск для железа!):\r\n"
+        L"   Intel K: умножитель (Core Ratio) + настройка LLC;\r\n"
+        L"   AMD Ryzen: включи PBO (Precision Boost Overdrive) -> Enabled/Advanced;\r\n"
+        L"4. Обязательно включи ReBAR/SAM выше разрешения PCIe.\r\n"
+        L"5. Тестируй стабильность: OCCT / Cinebench / AIDA64.\r\n"
+        L"\r\nПрофили XMP — это заводские безопасные профили памяти (обычно 3200-"
+        L"6000 МГц), включать их безопасно. Ручной разгон CPU повышает температуру"
+        L"и потребление — делай его только если знаешь, что делаешь.";
+}
+
 } // namespace opt
