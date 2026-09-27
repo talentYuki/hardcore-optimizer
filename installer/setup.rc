@@ -1,0 +1,4 @@
+// Ресурсы установщика LeakOptimizator.
+// Встраиваем исполняемый файл приложения как RCDATA для извлечения при установке.
+// Путь к exe передаётся через /I при вызове rc.exe (см. make_setup.bat).
+101 RCDATA "LeakOptimizator.exe"
