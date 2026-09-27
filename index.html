@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LEAKSHOP — LeakOptimizator</title>
+<style>
+  :root{
+    --bg:#050505; --panel:#0d0d0d; --panel2:#131313;
+    --line:#2a2a2a; --txt:#f0f0f0; --dim:#8a8a8a;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--bg); color:var(--txt);
+    font-family:"Segoe UI",Arial,sans-serif; line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:#fff;color:#000}
+  a{color:var(--txt);text-decoration:none}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+  /* Топбар */
+  header{position:sticky;top:0;z-index:10;background:rgba(5,5,5,.92);backdrop-filter:blur(6px);border-bottom:1px solid var(--line)}
+  .nav{display:flex;align-items:center;justify-content:space-between;height:64px}
+  .brand{display:flex;align-items:center;gap:12px;font-weight:700;letter-spacing:1px}
+  .brand img{height:36px;width:36px;object-fit:contain}
+  .brand .b{color:#fff} .brand .s{color:#fff;font-weight:300}
+  .nav-links{display:flex;gap:28px;font-size:14px;color:var(--dim)}
+  .nav-links a:hover{color:#fff}
+  .nav-cta{background:#fff;color:#000;padding:9px 18px;font-weight:600;font-size:13px;border-radius:2px}
+  /* Герой */
+  .hero{padding:110px 0 90px;text-align:center;position:relative}
+  .hero::after{content:"";position:absolute;inset:auto 0 0 0;height:1px;background:linear-gradient(90deg,transparent,var(--line),transparent)}
+  .hero .tag{display:inline-block;border:1px solid var(--line);color:var(--dim);font-size:12px;letter-spacing:3px;padding:6px 14px;border-radius:999px;margin-bottom:28px;text-transform:uppercase}
+  .hero h1{font-size:clamp(38px,7vw,74px);font-weight:800;letter-spacing:-2px;line-height:1}
+  .hero h1 span{color:#fff;background:#000;padding:0 8px;border:1px solid #fff}
+  .hero p.sub{max-width:620px;margin:26px auto 0;color:var(--dim);font-size:17px}
+  .hero .actions{margin-top:40px;display:flex;gap:16px;justify-content:center;flex-wrap:wrap}
+  .btn{display:inline-block;padding:14px 34px;font-weight:600;font-size:14px;letter-spacing:.5px}
+  .btn-solid{background:#fff;color:#000}
+  .btn-ghost{border:1px solid #fff;color:#fff}
+  .btn-ghost:hover{background:#fff;color:#000}
+  .hero .stats{margin-top:64px;display:flex;gap:0;border:1px solid var(--line)}
+  .hero .stat{flex:1;padding:22px 10px;border-right:1px solid var(--line)}
+  .hero .stat:last-child{border-right:none}
+  .hero .stat .n{font-size:30px;font-weight:800}
+  .hero .stat .l{font-size:12px;color:var(--dim);letter-spacing:1px;text-transform:uppercase}
+  /* Секции */
+  section{padding:90px 0}
+  .sec-head{margin-bottom:44px}
+  .sec-head .k{color:var(--dim);font-size:12px;letter-spacing:3px;text-transform:uppercase;margin-bottom:10px}
+  .sec-head h2{font-size:clamp(28px,4vw,40px);font-weight:800;letter-spacing:-1px}
+  .sec-head p{color:var(--dim);margin-top:10px;max-width:620px}
+  /* Сетка фич */
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px}
+  .card{background:var(--panel);border:1px solid var(--line);padding:26px;transition:.15s}
+  .card:hover{border-color:#fff;transform:translateY(-2px)}
+  .card .ic{font-size:26px;margin-bottom:14px}
+  .card h3{font-size:17px;margin-bottom:8px;font-weight:700}
+  .card p{color:var(--dim);font-size:14px}
+  /* Таблица твиков */
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{text-align:left;padding:14px 16px;border-bottom:1px solid var(--line)}
+  th{color:var(--dim);font-size:11px;letter-spacing:2px;text-transform:uppercase}
+  td .ok{color:#fff}
+  .table-scroll{overflow-x:auto;border:1px solid var(--line)}
+  /* Шаги */
+  .steps{display:flex;flex-direction:column;gap:14px}
+  .step{display:flex;gap:20px;align-items:baseline;background:var(--panel2);border:1px solid var(--line);padding:20px 24px}
+  .step .num{font-size:22px;font-weight:800;color:#fff;background:#000;border:1px solid #fff;width:42px;height:42px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .step h4{font-size:16px;margin-bottom:4px}
+  .step p{color:var(--dim);font-size:14px}
+  /* Баннер CTA */
+  .cta{background:var(--panel);border:1px solid var(--line);padding:60px 40px;text-align:center;margin-top:60px}
+  .cta h2{font-size:30px;font-weight:800;letter-spacing:-1px}
+  .cta p{color:var(--dim);margin:14px 0 30px}
+  /* Футер */
+  footer{padding:40px 0;border-top:1px solid var(--line);color:var(--dim);font-size:13px}
+  footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
+  @media(max-width:560px){ .nav-links{display:none} .hero{padding:80px 0 60px} }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap nav">
+    <div class="brand">
+      <img src="leakshop-logo.jpg" alt="LEAKSHOP">
+      <span class="b">LEAK</span><span class="s">SHOP</span>
+    </div>
+    <div class="nav-links">
+      <a href="#features">Возможности</a>
+      <a href="#tweaks">Твики</a>
+      <a href="#how">Установка</a>
+    </div>
+    <a href="#download" class="nav-cta">Скачать</a>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap">
+    <span class="tag">LeakOptimizator · v1.0</span>
+    <h1>ВЫЖИМАЕМ<br><span>КАЖДЫЙ FPS</span></h1>
+    <p class="sub">Утилита уровня ядра для Windows: чистка standby-памяти, приоритет HIGH_PRIORITY, Nagle, службы и таймер 1 мс — всё одной кнопкой и с полным откатом.</p>
+    <div class="actions">
+      <a href="#download" class="btn btn-solid">Скачать бесплатно</a>
+      <a href="#tweaks" class="btn btn-ghost">Смотреть твики</a>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="n">+15–40%</div><div class="l">Стабильность FPS</div></div>
+      <div class="stat"><div class="n">1 мс</div><div class="l">Таймер системы</div></div>
+      <div class="stat"><div class="n">100%</div><div class="l">Откат изменений</div></div>
+      <div class="stat"><div class="n">0 ₽</div><div class="l">Платных скрытых функций</div></div>
+    </div>
+  </div>
+</section>
+
+<section id="features">
+  <div class="wrap">
+    <div class="sec-head"><div class="k">Возможности</div><h2>Аппаратное ядро для твоей игры</h2><p>Работает на уровне системных механизмов Windows — быстро, агрессивно и обратимо.</p></div>
+    <div class="grid">
+      <div class="card"><div class="ic">⚡</div><h3>Standby-кэш очищен</h3><p>Быстрая очистка резервной памяти через NtSetSystemInformation — освобождает кэш под игру.</p></div>
+      <div class="card"><div class="ic">🎯</div><h3>Приоритет и ядра</h3><p>HIGH_PRIORITY_CLASS + запрет вытеснения фоновыми ядрами через маску приоритета процесса.</p></div>
+      <div class="card"><div class="ic">🌐</div><h3>Сеть без Nagle</h3><p>TCPNoDelay и TcpAckFrequency для минимального сетевого пинга во всех интерфейсах.</p></div>
+      <div class="card"><div class="ic">🗂</div><h3>Чистые службы</h3><p>Останавливает WSearch, SysMain, DiagTrack, MapsBroker — лишний расход CPU и диска.</p></div>
+      <div class="card"><div class="ic">⏱</div><h3>Таймер 1 мс</h3><p>timeBeginPeriod(1) плюс отключение динамического тика ядра для ровного frametime.</p></div>
+      <div class="card"><div class="ic">🖥</div><h3>Мониторинг в живую</h3><p>FPS через ETW, температуры CPU/GPU через WMI, загрузка ядер и RAM — в оверлее поверх игры.</p></div>
+      <div class="card"><div class="ic">🧠</div><h3>AMD / Intel детект</h3><p>Автоопределение вендора процессора, план питания «макс. производительность», разпарковка ядер и агрессивный boost.</p></div>
+      <div class="card"><div class="ic">🎚</div><h3>Пресеты в один клик</h3><p>«Максимальный FPS», «Стабильный frametime», «Стриминг» и «Безопасные» — готовые комбинации под любой сценарий.</p></div>
+      <div class="card"><div class="ic">📜</div><h3>Инструкция XMP/DOCP</h3><p>Безопасная памятка по разгону CPU и включению профилей памяти XMP/DOCP в BIOS, встроенная прямо в приложение.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="tweaks">
+  <div class="wrap">
+    <div class="sec-head"><div class="k">Реестр и система</div><h2>Полный список твиков</h2><p>Всё меняется обратимо — слепок реестра сохраняется, откат в один клик.</p></div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Твик</th><th>Механизм</th><th></th></tr></thead>
+        <tbody>
+          <tr><td>Очистка Standby-памяти</td><td>NtSetSystemInformation</td><td class="ok">✓</td></tr>
+          <tr><td>Приоритет HIGH_PRIORITY</td><td>SetPriorityClass</td><td class="ok">✓</td></tr>
+          <tr><td>Запрет фоновых ядер</td><td>SetProcessAffinityMask</td><td class="ok">✓</td></tr>
+          <tr><td>Отключение Game Bar / DVR</td><td>Реестр</td><td class="ok">✓</td></tr>
+          <tr><td>Ускорение мыши</td><td>Control Panel\Mouse</td><td class="ok">✓</td></tr>
+          <tr><td>Nagle / TCP-оптимизация</td><td>Tcpip\Parameters</td><td class="ok">✓</td></tr>
+          <tr><td>Фоновые службы</td><td>SCManager</td><td class="ok">✓</td></tr>
+          <tr><td>Таймер 1 мс + фикс тика</td><td>winmm + bcdedit</td><td class="ok">✓</td></tr>
+          <tr><td>Оверлей FPS / температуры</td><td>ETW + WMI</td><td class="ok">✓</td></tr>
+          <tr><td>Полный откат (Rollback)</td><td>JSON-слепок</td><td class="ok">✓</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section id="how">
+  <div class="wrap">
+    <div class="sec-head"><div class="k">Установка</div><h2>Три шага до максимума</h2></div>
+    <div class="steps">
+      <div class="step"><div class="num">1</div><div><h4>Запусти от имени администратора</h4><p>Двойной клик — UAC спросит подтверждение прав. Без них твики ядра не применятся.</p></div></div>
+      <div class="step"><div class="num">2</div><div><h4>Введи PID игры и жми «Применить всё»</h4><p>Твики, приоритет и очистка памяти применятся одной кнопкой.</p></div></div>
+      <div class="step"><div class="num">3</div><div><h4>Второй монитор через оверлей</h4><p>FPS, frametime, температуры CPU/GPU и загрузка ядер — прямо над игрой.</p></div></div>
+    </div>
+    <div class="cta" id="download">
+      <h2>Готов начать?</h2>
+      <p>Скачай LeakOptimizator и почувствуй разницу в первой же сессии.</p>
+      <a href="LeakOptimizator.zip" class="btn btn-solid">Скачать .zip (Windows)</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div>LEAKSHOP · LeakOptimizator v1.0</div>
+    <div>Windows 10/11 · C++20 · Только WinAPI</div>
+  </div>
+</footer>
+
+</body>
+</html>
