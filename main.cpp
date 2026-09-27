@@ -15,6 +15,7 @@
 #include <commctrl.h>
 #include <commdlg.h>
 #include <objbase.h>
+#include <dwmapi.h>
 
 #include <evntrace.h>
 #include <evntcons.h>
@@ -743,6 +744,12 @@ static HWND BuildMainWindow(HINSTANCE hInst) {
                                 CW_USEDEFAULT, CW_USEDEFAULT, 620, 820,
                                 nullptr, nullptr, hInst, nullptr);
     if (!hwnd) return nullptr;
+
+    // Тёмный заголовок окна (DWM dark mode) — окно в едином ч/б стиле.
+    // DWMWA_USE_IMMERSIVE_DARK_MODE = 20 (Win10 2004+), = 19 на старых.
+    BOOL dark = TRUE;
+    if (FAILED(DwmSetWindowAttribute(hwnd, 20, &dark, sizeof(dark))))
+        DwmSetWindowAttribute(hwnd, 19, &dark, sizeof(dark));
 
     // Регистрируем HWND в глобалах для доступа из Log/SetStatus.
     app::SetMainHwnd(hwnd);
