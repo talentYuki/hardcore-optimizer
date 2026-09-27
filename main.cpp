@@ -637,12 +637,52 @@ void ApplyThemePreset(HWND hwnd) {
 
 // ---------------------------------------------------------------------------
 // 7. Генерация элементов главного окна и создание самого окна.
+//    Всё окно — в ч/б (monochrome) стиле: тёмный фон, белые тексты,
+//    собственные чёрно-белые кнопки (owner-draw).
 // ---------------------------------------------------------------------------
 namespace {
+
+// Кисть тёмного фона клиентской области интерфейса.
+HBRUSH g_darkBg = nullptr;
+
+// Рисует кнопку в приложении в ч/б стиле (вызывается из WM_DRAWITEM).
+void DrawMonoButton(const DRAWITEMSTRUCT& di) {
+    if (di.CtlType != ODT_BUTTON) return;
+
+    const bool pressed = (di.itemState & ODS_SELECTED) != 0;
+    const bool focused = (di.itemState & ODS_FOCUS) != 0;
+
+    // Фон кнопки: почти чёрный, при нажатии — темнее.
+    HBRUSH bg = CreateSolidBrush(pressed ? RGB(38, 38, 40) : RGB(17, 17, 19));
+    FillRect(di.hDC, &di.rcItem, bg);
+    DeleteObject(bg);
+
+    // Рамка: серая по умолчанию, белая при фокусе/нажатии.
+    COLORREF border = (focused || pressed) ? RGB(255, 255, 255) : RGB(64, 64, 64);
+    HPEN pen = CreatePen(PS_SOLID, 1, border);
+    HGDIOBJ oldPen = SelectObject(di.hDC, pen);
+    HGDIOBJ oldBrush = SelectObject(di.hDC, GetStockObject(NULL_BRUSH));
+    Rectangle(di.hDC, di.rcItem.left, di.rcItem.top,
+              di.rcItem.right, di.rcItem.bottom);
+    SelectObject(di.hDC, oldBrush);
+    SelectObject(di.hDC, oldPen);
+    DeleteObject(pen);
+
+    // Текст по центру.
+    wchar_t text[256];
+    GetWindowTextW(di.hwndItem, text, 256);
+    SetBkMode(di.hDC, TRANSPARENT);
+    SetTextColor(di.hDC, RGB(238, 238, 238));
+    RECT rc = di.rcItem;
+    DrawTextW(di.hDC, text, -1, &rc, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+}
 
 // Компактный хелпер создания дочернего контрола.
 HWND MkWnd(HWND parent, const wchar_t* cls, const wchar_t* txt,
            DWORD style, int x, int y, int w, int h, int id) {
+    // Кнопки переводим в owner-draw — это даёт единый ч/б стиль.
+    if (_wcsicmp(cls, L"BUTTON") == 0)
+        style = (style & ~static_cast<DWORD>(BS_TYPEMASK)) | BS_OWNERDRAW;
     return CreateWindowExW(0, cls, txt, style | WS_CHILD | WS_VISIBLE,
                            x, y, w, h, parent, reinterpret_cast<HMENU>(INT_PTR(id)),
                            GetModuleHandleW(nullptr), nullptr);
@@ -654,12 +694,33 @@ HWND MkWnd(HWND parent, const wchar_t* cls, const wchar_t* txt,
 LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_CREATE: {
+            // Кисть тёмного фона для клиентской области (ч/б тема).
+            g_darkBg = CreateSolidBrush(RGB(16, 16, 18));
             // Запускаем фоновые потоки: мониторинг, ETW и рабочий поток твиков.
             app::g_monitorThread = std::thread(MonitorLoop);
             app::g_etwThread    = std::thread(EtwMonitorLoop);
             app::g_tweakThread  = std::thread(TweakWorkerLoop);
             SetTimer(hwnd, 1, 500, nullptr); // живой статус-таймер
             return 0;
+        }
+        // Ч/б стиль: белый текст и тёмный фон для надписей, полей, списков.
+        case WM_CTLCOLORSTATIC:
+        case WM_CTLCOLORLISTBOX:
+        case WM_CTLCOLOREDIT: {
+            HDC hdc = reinterpret_cast<HDC>(wParam);
+            SetBkMode(hdc, TRANSPARENT);
+            SetTextColor(hdc, RGB(232, 232, 232));
+            SetBkColor(hdc, RGB(16, 16, 18));
+            return reinterpret_cast<LRESULT>(g_darkBg);
+        }
+        // Собственные ч/б кнопки (owner-draw).
+        case WM_DRAWITEM: {
+            const auto* di = reinterpret_cast<LPDRAWITEMSTRUCT>(lParam);
+            if (di && di->CtlType == ODT_BUTTON) {
+                DrawMonoButton(*di);
+                return TRUE;
+            }
+            return DefWindowProcW(hwnd, msg, wParam, lParam);
         }
         case WM_COMMAND: {
             int id = LOWORD(wParam);
@@ -703,6 +764,7 @@ LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
         }
         case WM_DESTROY: {
             KillTimer(hwnd, 1);
+            if (g_darkBg) { DeleteObject(g_darkBg); g_darkBg = nullptr; }
             app::g_running = false;      // стоп мониторинга
             app::g_tweakRunning = false; // стоп рабочего потока твиков
             app::g_tweakCv.notify_all();
@@ -734,7 +796,7 @@ static HWND BuildMainWindow(HINSTANCE hInst) {
     wc.hCursor       = LoadCursorW(nullptr, IDC_ARROW);
     wc.hIcon         = LoadIconW(hInst, MAKEINTRESOURCEW(1));
     wc.lpszClassName = L"LeakOptMain";
-    wc.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_BTNFACE + 1);
+    wc.hbrBackground = reinterpret_cast<HBRUSH>(GetStockObject(BLACK_BRUSH));
     ATOM cls = RegisterClassW(&wc);
     if (cls == 0 && GetLastError() != ERROR_CLASS_ALREADY_EXISTS) return nullptr;
 

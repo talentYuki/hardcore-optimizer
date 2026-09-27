@@ -34,6 +34,10 @@ LeakOptimizator.theme.json
 HardcoreOptimizer.backup.json
 HardcoreOptimizer.theme.json
 
+# Временные/тестовые артефакты
+ui_screenshot.png
+index.html
+
 # Служебные файлы ОС / редактора
 Thumbs.db
 Desktop.ini
