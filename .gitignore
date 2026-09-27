@@ -1,0 +1,43 @@
+# ============================================================================
+# Hardcore Optimizer — .gitignore (для портфолио-репозитория)
+# ============================================================================
+
+# Артефакты сборки CMake
+build/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+*.vcxproj
+*.vcxproj.filters
+*.sln
+*.user
+
+# Собранный бинарник и релиз-пакеты
+HardcoreOptimizer.exe
+HardcoreOptimizer.zip
+/bin/
+*.exe
+
+# Релизные сборки и временные файлы
+release/
+*.res
+*.obj
+*.o
+*.pdb
+*.ilk
+
+# Рантайм-файлы приложения (создаются при запуске рядом с exe)
+HardcoreOptimizer.backup.json
+HardcoreOptimizer.theme.json
+HardcoreOptimizer.theme.json.bak
+
+# Служебные файлы ОС / редактора
+Thumbs.db
+Desktop.ini
+.vs/
+.idea/
+.vscode/
+
+# Сгенерированные картинки-демо (оставь, если хочешь показывать в портфолио)
+# leakshop-logo.jpg
+# leakshop-landing.html
